@@ -7,6 +7,7 @@ import torch
 import vllm._custom_ops as ops
 from vllm.attention.backends.abstract import (AttentionType,
                                               is_quantized_kv_cache)
+from vllm.attention.ops.triton_decode_attention import decode_attention_fwd
 from vllm.logger import init_logger
 from vllm.v1.attention.backends.mla.common import (MLACommonBackend,
                                                    MLACommonImpl,
@@ -86,8 +87,27 @@ class CutlassMLAImpl(MLACommonImpl[MLACommonMetadata]):
                         device=q_nope.device)
 
         # Run MLA
-        ops.cutlass_mla_decode(o, q_nope, q_pe, kv_c_and_k_pe_cache,
-                               attn_metadata.decode.seq_lens,
-                               attn_metadata.decode.block_table, self.scale)
+        #ops.cutlass_mla_decode(o, q_nope, q_pe, kv_c_and_k_pe_cache,
+        #                       attn_metadata.decode.seq_lens,
+        #                       attn_metadata.decode.block_table, self.scale)
+        print(f'{q.shape=}')
+        q = torch.cat([q_nope, q_pe], dim=-1)
+        attn_logits = torch.empty(
+            (
+                B,
+                self.num_heads,
+                4,
+                self.kv_lora_rank + 1,
+            ),
+            dtype=torch.float32,
+            device=q.device,
+        )
+        kv_c_and_k_pe_cache = kv_c_and_k_pe_cache.unsqueeze(2)
+        kv_c_cache = kv_c_and_k_pe_cache[..., :self.kv_lora_rank]
+        PAGE_SIZE = kv_c_and_k_pe_cache.size(1)
+        decode_attention_fwd(q, kv_c_and_k_pe_cache, kv_c_cache, o,
+                             attn_metadata.decode.block_table,
+                             attn_metadata.decode.seq_lens, attn_logits,
+                             4, self.scale, PAGE_SIZE)
 
         return self._v_up_proj(o)

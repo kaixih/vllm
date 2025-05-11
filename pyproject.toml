@@ -6,7 +6,6 @@ requires = [
     "packaging>=24.2",
     "setuptools>=77.0.3,<80.0.0",
     "setuptools-scm>=8.0",
-    "torch == 2.7.0",
     "wheel",
     "jinja2",
 ]
@@ -15,8 +14,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "vllm"
 authors = [{name = "vLLM Team"}]
-license = "Apache-2.0"
-license-files = ["LICENSE"]
+license = { "file"= "LICENSE" }
 readme = "README.md"
 description = "A high-throughput and memory-efficient inference and serving engine for LLMs"
 classifiers = [
@@ -24,6 +22,7 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "License :: OSI Approved :: Apache Software License",
     "Intended Audience :: Developers",
     "Intended Audience :: Information Technology",
     "Intended Audience :: Science/Research",
